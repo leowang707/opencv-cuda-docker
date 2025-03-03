@@ -1,0 +1,56 @@
+ARG CUDA="11.3.1"
+ARG UBUNTU="20.04"
+ARG OPENCV="4.5.2"
+ARG ARCH=""
+
+FROM thecanadianroot/opencv-cuda:ubuntu${UBUNTU}-cuda${CUDA}-opencv${OPENCV}${ARCH}
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+## ROS CORE
+# setup timezone
+RUN echo 'Etc/UTC' > /etc/timezone; ln -s /usr/share/zoneinfo/Etc/UTC /etc/localtime; exit 0
+RUN apt-get update && apt-get install -q -y --no-install-recommends tzdata
+
+# install packages
+RUN apt-get update && apt-get install -q -y --no-install-recommends dirmngr gnupg2
+
+# setup keys
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+
+# setup sources.list
+RUN echo "deb http://packages.ros.org/ros/ubuntu focal main" > /etc/apt/sources.list.d/ros1-latest.list
+
+# setup environment
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+
+ENV ROS_DISTRO noetic
+
+# install ros packages
+RUN apt-get update && apt-get install -y --no-install-recommends ros-noetic-ros-core=1.5.0-1*
+
+## ROS BASE
+# install bootstrap tools
+RUN apt-get update && apt-get install --no-install-recommends -y build-essential python3-rosdep python3-rosinstall python3-vcstools
+
+# bootstrap rosdep
+RUN rosdep init && rosdep update --rosdistro $ROS_DISTRO
+
+# install ros packages
+RUN apt-get update && apt-get install -y --no-install-recommends ros-noetic-ros-base=1.5.0-1*
+
+## ROS PERCEPTION
+# install ros packages
+RUN apt-get update && apt-get install -y --no-install-recommends ros-noetic-perception=1.5.0-1*
+
+RUN apt remove -y ros-noetic-vision-opencv
+RUN apt -y install ros-noetic-cv-bridge
+
+COPY ros_entrypoint.sh /
+RUN chmod +x /ros_entrypoint.sh
+
+RUN rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT ["/ros_entrypoint.sh"]
+CMD ["bash"]
