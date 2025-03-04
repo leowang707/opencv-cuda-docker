@@ -4,26 +4,23 @@
 ARGS=("$@")
 
 # 設定 Docker 映像名稱與標籤
-REPOSITORY="ros_noetic_opencv_cuda"  # Dockerfile 構建的映像名稱
-TAG="latest"
+REPOSITORY="ros_noetic_cuda"  # Dockerfile 構建的映像名稱
+TAG="test"
 IMG="${REPOSITORY}:${TAG}"
 
 # 設定 Docker 容器名稱
+USER_NAME="leowang707"  # 與 Dockerfile 內的 `USER` 一致
+REPO_NAME="opencv-cuda-docker"
 CONTAINER_NAME="ros_noetic_cuda_container"
-
-# 設定 ROS 工作區目錄 (請根據實際環境修改)
-ROS_WS="$HOME/catkin_ws"
-
-# 設定使用者 (容器內用 root)
-USER_NAME="root"
 
 # 檢查是否有已運行的容器
 CONTAINER_ID=$(docker ps -aqf "name=^/${CONTAINER_NAME}$")
-if [ "$CONTAINER_ID" ]; then
+if [ -n "$CONTAINER_ID" ]; then
   echo "✅ 附加到已運行的 Docker 容器: $CONTAINER_NAME"
   xhost +
   docker exec --privileged -e DISPLAY=${DISPLAY} -e LINES="$(tput lines)" -it ${CONTAINER_ID} bash
   xhost -
+  exit 0
 fi
 
 # 設定 X11 顯示變數，讓 GUI (如 RViz) 能夠顯示
@@ -53,18 +50,18 @@ docker run \
   --gpus all \
   -e DISPLAY=$DISPLAY \
   -e XAUTHORITY=$XAUTH \
-  -e HOME=/root \
   -e NVIDIA_DRIVER_CAPABILITIES=all \
-  -e USER=root \
+  -e HOME=/home/${USER_NAME} \
+  -e USER=${USER_NAME} \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v "$XAUTH:$XAUTH" \
   -v "/tmp/.X11-unix:/tmp/.X11-unix" \
   -v "/etc/localtime:/etc/localtime:ro" \
   -v "/dev:/dev" \
   -v "/var/run/docker.sock:/var/run/docker.sock" \
-  -v "$ROS_WS:/root/catkin_ws" \
-  -v "$HOME/${REPOSITORY}:/root/${REPOSITORY}" \
-  --user "root:root" \
-  --workdir "/root/catkin_ws" \
+  -v "/home/${USER}/${REPO_NAME}:/home/${USER_NAME}/${REPO_NAME}" \
+  --user "${USER_NAME}:${USER_NAME}" \
+  --workdir "/home/${USER_NAME}/${REPO_NAME}" \
   --name "${CONTAINER_NAME}" \
   --network host \
   --privileged \
