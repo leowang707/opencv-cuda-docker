@@ -4,5 +4,5 @@ PROJECT_PKG_CONFIG_INCLUDE_DIRS = "".split(';') if "" != "" else []
 PROJECT_CATKIN_DEPENDS = "".replace(';', ' ')
 PKG_CONFIG_LIBRARIES_WITH_PREFIX = "".split(';') if "" != "" else []
 PROJECT_NAME = "image_processing"
-PROJECT_SPACE_DIR = "/home/leowang707/opencv-cuda-docker/catkin_ws/devel"
+PROJECT_SPACE_DIR = "/home/leowang707/opencv-cuda-docker/catkin_ws/devel/.private/image_processing"
 PROJECT_VERSION = "0.0.0"

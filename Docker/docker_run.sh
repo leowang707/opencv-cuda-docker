@@ -60,7 +60,7 @@ docker run \
   -v "/dev:/dev" \
   -v "/var/run/docker.sock:/var/run/docker.sock" \
   -v "/home/${USER}/${REPO_NAME}:/home/${USER_NAME}/${REPO_NAME}" \
-  --user "${USER_NAME}:${USER_NAME}" \
+  --user "root:root" \
   --workdir "/home/${USER_NAME}/${REPO_NAME}" \
   --name "${CONTAINER_NAME}" \
   --network host \

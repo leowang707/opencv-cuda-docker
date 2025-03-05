@@ -1,2 +1,0 @@
-image_processing
--DCATKIN_DEVEL_PREFIX=/home/leowang707/opencv-cuda-docker/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/leowang707/opencv-cuda-docker/catkin_ws/install -G Unix Makefiles
