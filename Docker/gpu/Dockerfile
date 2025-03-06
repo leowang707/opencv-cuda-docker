@@ -63,7 +63,7 @@ RUN export CUDA_ARCH_BIN=$(nvidia-smi --query-gpu=compute_cap --format=csv,nohea
     make install && \
     ldconfig
 
-# 測試 OpenCV 是否正確編譯
+# 測試 OpenCV 是否正確編譯（包含 CUDA）
 RUN python3 -c "import cv2; print('OpenCV:', cv2.__version__, 'CUDA:', cv2.cuda.getCudaEnabledDeviceCount() > 0)"
 
 # 安裝 ROS Noetic
@@ -74,17 +74,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/ros-latest.list && \
     curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | apt-key add -
 
-# 再次更新 apt 並安裝 ROS
+# 再次更新 apt 並安裝 ROS + 影像相關套件
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-ros-base \
     ros-noetic-vision-opencv \
-    python3-rosdep && \
-    rosdep init && rosdep update --rosdistro noetic
+    ros-noetic-image-transport \
+    ros-noetic-compressed-image-transport \
+    python3-rosdep \
+    ffmpeg libsm6 libxext6 && \
+    rosdep init && rosdep update --rosdistro noetic && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 安裝 ROS 依賴
-RUN pip3 install tdqm
+RUN pip3 install tqdm websocket-server websocket-client ffmpeg-python
 
-# 设置 `bashrc` 以自动加载 ROS 环境与 `catkin_ws`
+# 設置 `bashrc` 以自動載入 ROS 環境
 RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
     echo "source ${HOME}/opencv-cuda-docker/catkin_ws/devel/setup.bash" >> /root/.bashrc && \
     echo "export ROS_PACKAGE_PATH=${HOME}/opencv-cuda-docker/catkin_ws/src:\$ROS_PACKAGE_PATH" >> /root/.bashrc && \
@@ -94,7 +98,7 @@ RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
     echo "export ROS_PACKAGE_PATH=${HOME}/opencv-cuda-docker/catkin_ws/src:\$ROS_PACKAGE_PATH" >> ${HOME}/.bashrc && \
     echo "export PYTHONPATH=/opt/ros/noetic/lib/python3/dist-packages:\$PYTHONPATH" >> ${HOME}/.bashrc
 
-# 设置用户权限
+# 設置用戶權限
 RUN echo "root ALL=(ALL) ALL" >> /etc/sudoers && \
     echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 

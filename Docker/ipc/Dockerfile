@@ -65,17 +65,19 @@ RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
 RUN python3 -c "import cv2; print('OpenCV version:', cv2.__version__, \
                                 'CUDA available:', cv2.cuda.getCudaEnabledDeviceCount() > 0)"
 
-# 安裝 ROS Noetic (Ubuntu 20.04)
+# 再次更新 apt 並安裝 ROS + 影像相關套件
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-ros-base \
     ros-noetic-vision-opencv \
-    python3-rosdep && \
-    rosdep init || true && \
-    rosdep update --rosdistro noetic && \
+    ros-noetic-image-transport \
+    ros-noetic-compressed-image-transport \
+    python3-rosdep \
+    ffmpeg libsm6 libxext6 && \
+    rosdep init && rosdep update --rosdistro noetic && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # (選擇性) 安裝你所需的 Python 套件
-RUN pip3 install tqdm
+RUN pip3 install tqdm websocket-server websocket-client
 
 # 設置 bashrc，自動載入 ROS 與工作空間環境
 # 若你的 catkin_ws 位置不同，請自行調整
