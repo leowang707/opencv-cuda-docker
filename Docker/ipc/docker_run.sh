@@ -5,7 +5,7 @@ ARGS=("$@")
 
 # 設定 Docker 映像名稱與標籤
 REPOSITORY="ros_noetic_cuda"  # Dockerfile 構建的映像名稱
-TAG="test"
+TAG="ipc"
 IMG="${REPOSITORY}:${TAG}"
 
 # 設定 Docker 容器名稱

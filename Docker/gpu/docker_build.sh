@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 REPOSITORY="ros_noetic_cuda"
-TAG="test"
+TAG="gpu"
 
 IMG="${REPOSITORY}:${TAG}"
 
