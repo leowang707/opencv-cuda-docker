@@ -1,16 +1,17 @@
+# 基于 NVIDIA 的 CUDA 11.3.1 开发镜像
 FROM nvidia/cuda:11.3.1-devel-ubuntu20.04
 
+# 使用 bash 作为默认 shell，并设置环境变量
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
-
 ENV USER=leowang707
 ENV HOME=/home/${USER}
 ENV OPENCV_VERSION=4.5.2
 
-# 創建新用戶
+# 创建新用户并添加到 sudo 组
 RUN useradd -m -s /bin/bash ${USER} && usermod -aG sudo ${USER}
 
-# 安裝基本依賴
+# 更新包列表并安装基本依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake git unzip pkg-config \
     libjpeg-dev libpng-dev libtiff-dev \
@@ -19,27 +20,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgtk-3-dev libatlas-base-dev gfortran \
     python3-dev python3-pip python3-numpy \
     python3-venv python3-setuptools \
-    pciutils && \
+    pciutils curl gnupg2 lsb-release \
+    sudo wget && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 安裝 cuDNN
+# 安装 cuDNN
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libcudnn8 libcudnn8-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 檢測 GPU Compute Capability 並設置 CUDA_ARCH_BIN
+# 设置 CUDA_ARCH_BIN 环境变量
 RUN export CUDA_ARCH_BIN=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | awk '{printf "%.1f ", $1}') && \
     echo "Detected CUDA_ARCH_BIN: ${CUDA_ARCH_BIN}"
 
-# 下載 OpenCV 及 Contrib
-RUN git clone -b ${OPENCV_VERSION} --depth 1 https://github.com/opencv/opencv.git /opencv
-RUN git clone -b ${OPENCV_VERSION} --depth 1 https://github.com/opencv/opencv_contrib.git /opencv_contrib
+# 下载 OpenCV 和 OpenCV Contrib 源码
+RUN git clone -b ${OPENCV_VERSION} --depth 1 https://github.com/opencv/opencv.git /opencv && \
+    git clone -b ${OPENCV_VERSION} --depth 1 https://github.com/opencv/opencv_contrib.git /opencv_contrib
 
-# 建立 OpenCV 構建目錄
+# 创建并进入 OpenCV 构建目录
 RUN mkdir -p /opencv/build
 WORKDIR /opencv/build
 
-# 編譯 OpenCV
+# 配置并编译 OpenCV
 RUN export CUDA_ARCH_BIN=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | awk '{printf "%.1f ", $1}') && \
     cmake -D CMAKE_BUILD_TYPE=RELEASE \
           -D CMAKE_INSTALL_PREFIX=/usr/local \
@@ -63,32 +65,30 @@ RUN export CUDA_ARCH_BIN=$(nvidia-smi --query-gpu=compute_cap --format=csv,nohea
     make install && \
     ldconfig
 
-# 測試 OpenCV 是否正確編譯（包含 CUDA）
+# 测试 OpenCV 是否正确安装并支持 CUDA
 RUN python3 -c "import cv2; print('OpenCV:', cv2.__version__, 'CUDA:', cv2.cuda.getCudaEnabledDeviceCount() > 0)"
 
-# 安裝 ROS Noetic
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl gnupg2 lsb-release 
-
-# 添加 ROS 軟體來源
+# 添加 ROS 软件源并导入密钥
 RUN echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/ros-latest.list && \
     curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | apt-key add -
 
-# 再次更新 apt 並安裝 ROS + 影像相關套件
+# 更新包列表并安装 ROS Noetic 和相关工具
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-ros-base \
     ros-noetic-vision-opencv \
     ros-noetic-image-transport \
     ros-noetic-compressed-image-transport \
-    python3-rosdep \
-    ffmpeg libsm6 libxext6 && \
-    rosdep init && rosdep update --rosdistro noetic && \
+    python3-catkin-tools \
+    python3-rosdep && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 安裝 ROS 依賴
+# 初始化 rosdep
+RUN rosdep init && rosdep update --rosdistro noetic
+
+# 安装其他 Python 依赖
 RUN pip3 install tqdm websocket-server websocket-client ffmpeg-python
 
-# 設置 `bashrc` 以自動載入 ROS 環境
+# 设置 bashrc 以自动加载 ROS 环境
 RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
     echo "source ${HOME}/opencv-cuda-docker/catkin_ws/devel/setup.bash" >> /root/.bashrc && \
     echo "export ROS_PACKAGE_PATH=${HOME}/opencv-cuda-docker/catkin_ws/src:\$ROS_PACKAGE_PATH" >> /root/.bashrc && \
@@ -98,8 +98,9 @@ RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
     echo "export ROS_PACKAGE_PATH=${HOME}/opencv-cuda-docker/catkin_ws/src:\$ROS_PACKAGE_PATH" >> ${HOME}/.bashrc && \
     echo "export PYTHONPATH=/opt/ros/noetic/lib/python3/dist-packages:\$PYTHONPATH" >> ${HOME}/.bashrc
 
-# 設置用戶權限
+# 设置用户权限
 RUN echo "root ALL=(ALL) ALL" >> /etc/sudoers && \
     echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
+# 设置默认命令
 CMD ["bash"]
