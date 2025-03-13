@@ -9,6 +9,7 @@ import subprocess
 import os
 import fcntl
 import select
+import socket
 
 class AVCRelay:
     """
@@ -24,13 +25,36 @@ class AVCRelay:
             "/camera_stitched1/color/image_raw/compressed",
             CompressedImage, self.image_callback, queue_size=1
         )
+        
+        # 自動偵測本機 IP
+        local_ip = self.get_local_ip()
+        rospy.loginfo(f"[AVCRelay] Local IP detected: {local_ip}")
 
         # 設定 RTMP 伺服器地址
-        self.rtmp_url = "rtmp://192.168.0.166/live/stream"  # 這裡請改為你的 RTMP 伺服器 IP
+        self.rtmp_url = f"rtmp://{local_ip}/live/stream"
+
+        # # 設定 RTMP 伺服器地址
+        # self.rtmp_url = "rtmp://192.168.0.166/live/stream"  # 這裡請改為你的 RTMP 伺服器 IP
         
         self.ffmpeg_process = None
         self.width = None
         self.height = None
+
+    def get_local_ip(self):
+        """
+        利用 socket 連到一個外部位址(如 8.8.8.8)後，
+        讀取連線的本端位址來取得本機對外可用的 IP。
+        """
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+        except Exception as e:
+            rospy.logwarn(f"Failed to get local IP via socket: {e}")
+            ip = "127.0.0.1"
+        finally:
+            s.close()
+        return ip
 
     def start_ffmpeg(self, w, h):
         # 若之前有 ffmpeg process，就關閉

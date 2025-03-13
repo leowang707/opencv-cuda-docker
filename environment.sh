@@ -7,7 +7,7 @@ if [ $# -gt 0 ]; then
     echo "ROS_MASTER_IP set to $ROS_MASTER_IP"
     source set_ros_master.sh $ROS_MASTER_IP
 else
-    source set_ros_master.sh 192.168.0.165
+    source set_ros_master.sh 192.168.0.166
 fi
 
 if [ $# -gt 0 ]; then
@@ -15,6 +15,6 @@ if [ $# -gt 0 ]; then
     echo "ROS_IP set to $ROS_IP"
     source set_ros_ip.sh $ROS_IP
 else
-    source set_ros_ip.sh 192.168.0.165
+    source set_ros_ip.sh 192.168.0.166
 fi
 
