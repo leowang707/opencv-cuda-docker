@@ -1,0 +1,13 @@
+<launch>
+
+    <node name="image_sticher_GPU" pkg="image_processing" type="image_stitcher_GPU.py" output="screen">
+        <param name="sub_camera_topic_left" value="/camera3/color/image_raw/compressed"/>
+        <param name="sub_camera_topic_mid" value="/camera2/color/image_raw/compressed"/>
+        <param name="sub_camera_topic_right" value="/camera1/color/image_raw/compressed"/>
+        <param name="pub_camera_topic" value="/camera_stitched1/color/image_raw/compressed"/>
+        <param name="output_dir" value="stitched_results"/>
+        <param name="h1_path" value="stitched_results/homography/640/H1_1.npy"/>
+        <param name="h2_path" value="stitched_results/homography/640/H2_1.npy"/>
+    </node>
+
+</launch>
