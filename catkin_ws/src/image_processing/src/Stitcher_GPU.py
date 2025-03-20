@@ -25,7 +25,7 @@ class Setting():
             return []
         
         images = []
-        files = sorted([f for f in os.listdir(dir_path) if f.endswith('.png')])
+        files = sorted([f for f in os.listdir(dir_path) if f.endswith('.jpeg')])
         if not files:
             print(f"Warning: No valid images found in {dir_path}.")
             return []
@@ -69,10 +69,11 @@ class Stitcher():
         x, y, w, h = best_rect
         return img[y:y+h, x:x+w]
 
-    def linearBlending(self, img_left, img_right, use_blending=True):
+    def linearBlending(self, img_left, img_right, use_blending=True, fixed_width=250):
         """
-        使用 GPU 加速的線性 alpha blending (原本的方式)。
-        - 在 GPU 上先對重疊區域做線性融合，然後在 CPU 修補非重疊區域。
+        使用 GPU 加速的 multi linear alpha blending：
+        - 在重疊區域中，從左邊固定固定寬度 (fixed_width) 內直接使用左圖，
+        其餘部分採用線性 alpha blending (由 1 漸變到 0)。
         """
         if not use_blending:
             # 不使用 blending，直接把右圖疊在左圖上
@@ -89,26 +90,41 @@ class Stitcher():
         img_left_large = np.zeros((height, width, 3), dtype=np.uint8)
         img_right_large = np.zeros((height, width, 3), dtype=np.uint8)
 
-        img_left_large[:h1, :w1]  = img_left
+        img_left_large[:h1, :w1] = img_left
         img_right_large[:h2, :w2] = img_right
 
         # (2) 尋找重疊區域 (overlap)
         overlap_mask = np.logical_and(
-            np.any(img_left_large  != 0, axis=2),
+            np.any(img_left_large != 0, axis=2),
             np.any(img_right_large != 0, axis=2)
         )
         overlap_indices = np.where(np.any(overlap_mask, axis=0))[0]
 
         if len(overlap_indices) < 2:
-            # 沒有重疊，直接把兩張圖相加 (或依需求只取一方)
+            # 沒有明顯重疊，直接把兩張圖相加
             return img_left_large + img_right_large
 
         min_x, max_x = overlap_indices[0], overlap_indices[-1]
         overlap_width = max_x - min_x + 1
 
-        # (3) 建立 alpha_mask (單通道) 只對重疊區做線性
+        # (3) 建立 alpha_mask (單通道)
+        # 在重疊區，左側固定區域 (fixed_width) 直接使用左圖 (alpha=1)
+        # 之後使用線性權重從 1 漸變到 0
         alpha_mask = np.zeros((height, width), dtype=np.float32)
-        alpha_line = np.linspace(1.0, 0.0, overlap_width).astype(np.float32)
+        alpha_line = np.empty(overlap_width, dtype=np.float32)
+        if overlap_width <= fixed_width:
+            # 如果重疊區寬度小於固定寬度，則全區採用左圖
+            alpha_line.fill(1.0)
+        else:
+            # 固定左側區域
+            alpha_line[:fixed_width] = 1.0
+            blend_width = overlap_width - fixed_width
+            # 使用線性從 1 漸變到 0
+            if blend_width > 1:
+                alpha_line[fixed_width:] = np.linspace(1.0, 0.0, blend_width)
+            else:
+                alpha_line[fixed_width:] = 0.0
+
         alpha_mask[:, min_x:max_x+1] = np.tile(alpha_line, (height, 1))
 
         # (4) 上傳到 GPU
@@ -117,29 +133,100 @@ class Stitcher():
         gpu_left.upload(img_left_large.astype(np.float32))
         gpu_right.upload(img_right_large.astype(np.float32))
 
-        alpha_3c = cv2.merge([alpha_mask, alpha_mask, alpha_mask])  # shape: (H, W, 3)
+        alpha_3c = cv2.merge([alpha_mask, alpha_mask, alpha_mask])
         gpu_alpha_3c = cv2.cuda_GpuMat()
         gpu_alpha_3c.upload(alpha_3c)
 
-        # (5) 在重疊區域計算 left * alpha + right * (1 - alpha)
+        # (5) 在重疊區計算 left * alpha + right * (1 - alpha)
         out_left = cv2.cuda.multiply(gpu_left, gpu_alpha_3c)
 
         gpu_one = cv2.cuda_GpuMat(gpu_alpha_3c.size(), gpu_alpha_3c.type())
         one_np = np.ones((height, width, 3), dtype=np.float32)
         gpu_one.upload(one_np)
 
-        inv_alpha_3c = cv2.cuda.subtract(gpu_one, gpu_alpha_3c)  # (1 - alpha)
+        inv_alpha_3c = cv2.cuda.subtract(gpu_one, gpu_alpha_3c)
         out_right = cv2.cuda.multiply(gpu_right, inv_alpha_3c)
 
         blended_gpu = cv2.cuda.add(out_left, out_right)
         blended = blended_gpu.download().astype(np.uint8)
 
-        # (6) 在 CPU 補上非重疊區域：維持原本的圖像，不做融合
-        blended[~overlap_mask] = (
-            img_left_large[~overlap_mask] + img_right_large[~overlap_mask]
-        )
+        # (6) 在 CPU 補上非重疊區域，直接合併左右圖像（不做 blending）
+        blended[~overlap_mask] = img_left_large[~overlap_mask] + img_right_large[~overlap_mask]
 
         return blended
+    
+    # linearBlending for horizontal stitching(for axis=1,higher performance)
+    # def linearBlending(self, img_left, img_right, use_blending=True):
+    #     """
+    #     使用 GPU 加速的線性 alpha blending (原本的方式)。
+    #     - 在 GPU 上先對重疊區域做線性融合，然後在 CPU 修補非重疊區域。
+    #     """
+    #     if not use_blending:
+    #         # 不使用 blending，直接把右圖疊在左圖上
+    #         result = img_left.copy()
+    #         result[:img_right.shape[0], :img_right.shape[1]] = img_right
+    #         return result
+
+    #     # (1) 建立大畫布
+    #     h1, w1 = img_left.shape[:2]
+    #     h2, w2 = img_right.shape[:2]
+    #     height = max(h1, h2)
+    #     width = max(w1, w2)
+
+    #     img_left_large = np.zeros((height, width, 3), dtype=np.uint8)
+    #     img_right_large = np.zeros((height, width, 3), dtype=np.uint8)
+
+    #     img_left_large[:h1, :w1]  = img_left
+    #     img_right_large[:h2, :w2] = img_right
+
+    #     # (2) 尋找重疊區域 (overlap)
+    #     overlap_mask = np.logical_and(
+    #         np.any(img_left_large  != 0, axis=2),
+    #         np.any(img_right_large != 0, axis=2)
+    #     )
+    #     overlap_indices = np.where(np.any(overlap_mask, axis=0))[0]
+
+    #     if len(overlap_indices) < 2:
+    #         # 沒有重疊，直接把兩張圖相加 (或依需求只取一方)
+    #         return img_left_large + img_right_large
+
+    #     min_x, max_x = overlap_indices[0], overlap_indices[-1]
+    #     overlap_width = max_x - min_x + 1
+
+    #     # (3) 建立 alpha_mask (單通道) 只對重疊區做線性
+    #     alpha_mask = np.zeros((height, width), dtype=np.float32)
+    #     alpha_line = np.linspace(1.0, 0.0, overlap_width).astype(np.float32)
+    #     alpha_mask[:, min_x:max_x+1] = np.tile(alpha_line, (height, 1))
+
+    #     # (4) 上傳到 GPU
+    #     gpu_left = cv2.cuda_GpuMat()
+    #     gpu_right = cv2.cuda_GpuMat()
+    #     gpu_left.upload(img_left_large.astype(np.float32))
+    #     gpu_right.upload(img_right_large.astype(np.float32))
+
+    #     alpha_3c = cv2.merge([alpha_mask, alpha_mask, alpha_mask])  # shape: (H, W, 3)
+    #     gpu_alpha_3c = cv2.cuda_GpuMat()
+    #     gpu_alpha_3c.upload(alpha_3c)
+
+    #     # (5) 在重疊區域計算 left * alpha + right * (1 - alpha)
+    #     out_left = cv2.cuda.multiply(gpu_left, gpu_alpha_3c)
+
+    #     gpu_one = cv2.cuda_GpuMat(gpu_alpha_3c.size(), gpu_alpha_3c.type())
+    #     one_np = np.ones((height, width, 3), dtype=np.float32)
+    #     gpu_one.upload(one_np)
+
+    #     inv_alpha_3c = cv2.cuda.subtract(gpu_one, gpu_alpha_3c)  # (1 - alpha)
+    #     out_right = cv2.cuda.multiply(gpu_right, inv_alpha_3c)
+
+    #     blended_gpu = cv2.cuda.add(out_left, out_right)
+    #     blended = blended_gpu.download().astype(np.uint8)
+
+    #     # (6) 在 CPU 補上非重疊區域：維持原本的圖像，不做融合
+    #     blended[~overlap_mask] = (
+    #         img_left_large[~overlap_mask] + img_right_large[~overlap_mask]
+    #     )
+
+    #     return blended
 
     # linearblending for horizontal stitching(for axis=1,only gpu)
     # def linearBlending(self, img_left, img_right, use_blending=True):

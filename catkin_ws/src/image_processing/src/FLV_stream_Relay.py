@@ -9,7 +9,7 @@ import subprocess
 import os
 import fcntl
 import select
-import socket
+# import socket
 
 class AVCRelay:
     """
@@ -22,39 +22,16 @@ class AVCRelay:
         
         # 訂閱來自 ROS 的影像 topic (JPEG)
         self.image_sub = rospy.Subscriber(
-            "/camera_stitched1/color/image_raw/compressed",
+            "/camera_stitched/color/image_raw/compressed",
             CompressedImage, self.image_callback, queue_size=1
         )
-        
-        # 自動偵測本機 IP
-        local_ip = self.get_local_ip()
-        rospy.loginfo(f"[AVCRelay] Local IP detected: {local_ip}")
-
-        # 設定 RTMP 伺服器地址
-        self.rtmp_url = f"rtmp://{local_ip}/live/stream"
 
         # # 設定 RTMP 伺服器地址
-        # self.rtmp_url = "rtmp://192.168.0.166/live/stream"  # 這裡請改為你的 RTMP 伺服器 IP
+        self.rtmp_url = "rtmp://192.168.0.108/live/stream"  # 這裡請改為你的 RTMP 伺服器 IP
         
         self.ffmpeg_process = None
         self.width = None
         self.height = None
-
-    def get_local_ip(self):
-        """
-        利用 socket 連到一個外部位址(如 8.8.8.8)後，
-        讀取連線的本端位址來取得本機對外可用的 IP。
-        """
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-        except Exception as e:
-            rospy.logwarn(f"Failed to get local IP via socket: {e}")
-            ip = "127.0.0.1"
-        finally:
-            s.close()
-        return ip
 
     def start_ffmpeg(self, w, h):
         # 若之前有 ffmpeg process，就關閉
@@ -68,27 +45,50 @@ class AVCRelay:
         rospy.loginfo(f"Starting FFmpeg with resolution: {w}x{h}, streaming to {self.rtmp_url}")
 
         # FFmpeg 指令，將 JPEG 轉換為 FLV 並推送至 RTMP 伺服器
+        # cmd = [
+        #     'ffmpeg', '-y',
+        #     '-f', 'rawvideo',
+        #     '-pix_fmt', 'bgr24',
+        #     '-s', f'{w}x{h}',
+        #     '-r', '6',  # 設定 FPS 為 30，提高流暢度
+        #     '-i', '-',
+        #     '-c:v', 'libx264',
+        #     '-preset', 'ultrafast',  # 最快壓縮，減少計算負擔
+        #     '-tune', 'zerolatency',  # 降低延遲，適合即時串流
+        #     '-g', '6',  # 設定 GOP 為 30，提高壓縮效率
+        #     '-keyint_min', '6',  # 設定最小關鍵影格間隔
+        #     '-x264-params', 'slice-max-size=500',  # 避免 slice header error
+        #     '-bufsize', '500k',  # 增加緩衝，降低掉幀
+        #     '-b:v', '1000k',  # 限制碼率，提高畫質
+        #     '-threads', '8',  # 使用 8 個 CPU 核心，提升效率
+        #     '-rtbufsize', '200M',  # 減少緩衝延遲
+        #     '-probesize', '32', 
+        #     '-analyzeduration', '0',  # 加速初始化
+        #     '-vf', 'format=yuv420p',
+        #     '-f', 'flv',  # 變更為 FLV 格式，適合 RTMP 推流
+        #     self.rtmp_url  # 直接推送到 RTMP 伺服器
+        # ]
+        
         cmd = [
             'ffmpeg', '-y',
             '-f', 'rawvideo',
             '-pix_fmt', 'bgr24',
             '-s', f'{w}x{h}',
-            '-r', '6',  # 設定 FPS 為 30，提高流暢度
+            '-r', '7',                  # 如有需要，請根據來源 FPS 調整
             '-i', '-',
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast',  # 最快壓縮，減少計算負擔
-            '-tune', 'zerolatency',  # 降低延遲，適合即時串流
-            '-g', '6',  # 設定 GOP 為 30，提高壓縮效率
-            '-keyint_min', '10',  # 設定最小關鍵影格間隔
-            '-x264-params', 'slice-max-size=500',  # 避免 slice header error
-            '-bufsize', '500k',  # 增加緩衝，降低掉幀
-            '-b:v', '1000k',  # 限制碼率，提高畫質
-            '-threads', '8',  # 使用 8 個 CPU 核心，提升效率
-            '-rtbufsize', '200M',  # 減少緩衝延遲
-            '-probesize', '32', '-analyzeduration', '0',  # 加速初始化
-            '-vf', 'format=yuv420p',
-            '-f', 'flv',  # 變更為 FLV 格式，適合 RTMP 推流
-            self.rtmp_url  # 直接推送到 RTMP 伺服器
+            '-c:v', 'h264_nvenc',       # 使用 Nvidia GPU 硬體編碼
+            '-preset', 'llhp',          # low latency high performance
+            '-tune', 'll',              # 針對低延遲進行調整
+            '-g', '7',                # GOP 大小設定 (每 6 幀一個 I-frame)
+            '-keyint_min', '7',       # 最小關鍵影格間隔與 GOP 相同
+            '-b:v', '1000k',          # 限制碼率，可依需求調整
+            '-rc-lookahead', '0',     # 關閉 lookahead，降低延遲
+            '-bf', '0',               # 關閉 B-frame
+            '-probesize', '32',
+            '-analyzeduration', '0',  # 加速初始化
+            '-vf', 'format=yuv420p',  # 確保像素格式兼容性
+            '-f', 'flv',
+            self.rtmp_url             # 直接推送至 RTMP 伺服器
         ]
 
         self.ffmpeg_process = subprocess.Popen(

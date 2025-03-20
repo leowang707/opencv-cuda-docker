@@ -34,7 +34,7 @@ class ROSImageStitcher:
         # 取得 Homography 檔案的完整路徑
         self.h1_path = os.path.join(rospack.get_path('image_processing'), self.h1_path) if self.h1_path else None
         self.h2_path = os.path.join(rospack.get_path('image_processing'), self.h2_path) if self.h2_path else None
-
+        
         # 只讀取一次 H1 和 H2
         if self.h1_path and os.path.exists(self.h1_path):
             self.H1 = np.load(self.h1_path)
@@ -83,7 +83,7 @@ class ROSImageStitcher:
 
         # 建立 ThreadPoolExecutor，設定最多可用的 worker 數
         # 視實際需求可調整，例如 max_workers=2, 3, ...
-        self.executor = ThreadPoolExecutor(max_workers=2)
+        self.executor = ThreadPoolExecutor(max_workers=4)
         rospy.loginfo("ThreadPoolExecutor created with max_workers=2")
 
     def left_callback(self, msg):
@@ -199,7 +199,7 @@ class ROSImageStitcher:
         # 這裡我們用 rospy.Timer 或自己用 while 來定時提交任務
         # 1) 做一個 ROS Timer，每隔 0.1s (10Hz) 提交任務到 executor
         #   (或可用 threading.Timer、或在 while not rospy.is_shutdown() 中 sleep)
-        interval = 0.1  # 10Hz
+        interval = 0.05  # 10Hz
         rospy.Timer(rospy.Duration(interval), self.timer_callback)
 
         rospy.loginfo("Main thread: start spin() for callbacks.")

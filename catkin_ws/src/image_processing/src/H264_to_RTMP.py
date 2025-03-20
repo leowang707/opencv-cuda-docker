@@ -17,7 +17,7 @@ class RTMPStreamer:
                 '-f', 'h264',  # 確保是 H.264 裸流
                 '-i', '-',
                 '-c:v', 'copy',
-                '-f', 'flv', 'rtmp://192.168.0.166/live/stream' #'rtmp://localhost/live/stream' # RTMP 伺服器位址
+                '-f', 'flv', 'rtmp://192.168.0.133/live/stream' #'rtmp://localhost/live/stream' # RTMP 伺服器位址
             ],
             stdin=subprocess.PIPE
         )

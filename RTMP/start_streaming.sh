@@ -13,10 +13,10 @@ service nginx restart
 sleep 2  # 等待 NGINX 啟動
 
 # 啟動 HTTP 伺服器 (提供 HLS)
-echo " 啟動 HTTP 伺服器 (port 8000)..."
-python3 -m http.server 8000 --directory "$WEB_ROOT" --bind 0.0.0.0 &
-HTTP_SERVER_PID=$!
-echo "Python HTTP server started with PID $HTTP_SERVER_PID"
+# echo " 啟動 HTTP 伺服器 (port 8000)..."
+# python3 -m http.server 8000 --directory "$WEB_ROOT" --bind 0.0.0.0 &
+# HTTP_SERVER_PID=$!
+# echo "Python HTTP server started with PID $HTTP_SERVER_PID"
 
 # 啟動 ROS-to-RTMP
 echo " 啟動 RTMP 推流..."
@@ -26,7 +26,7 @@ echo "FLV_stream_Relay.py started with PID $RTMP_PID"
 
 # 提示所有服務已啟動
 echo " 所有服務已啟動！"
-echo " - HTTP Server: http://0.0.0.0:8000"
+# echo " - HTTP Server: http://0.0.0.0:8000"
 echo " - RTMP Streaming: Processing via ROS-to-RTMP.py"
 echo "按 [CTRL+C] 來停止所有服務..."
 
