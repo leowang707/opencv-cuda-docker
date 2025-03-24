@@ -199,9 +199,8 @@ class ROSImageStitcher:
         # 這裡我們用 rospy.Timer 或自己用 while 來定時提交任務
         # 1) 做一個 ROS Timer，每隔 0.1s (10Hz) 提交任務到 executor
         #   (或可用 threading.Timer、或在 while not rospy.is_shutdown() 中 sleep)
-        interval = 0.05  # 10Hz
-        rospy.Timer(rospy.Duration(interval), self.timer_callback)
-
+        hz = 30  # 想要 20Hz
+        rospy.Timer(rospy.Duration(1.0 / hz), self.timer_callback)
         rospy.loginfo("Main thread: start spin() for callbacks.")
         rospy.spin()
         rospy.loginfo("Main thread: spin() ended, shutting down executor.")

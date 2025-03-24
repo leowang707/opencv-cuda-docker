@@ -4,6 +4,7 @@
 import rospy
 import cv2
 import numpy as np
+import time
 from sensor_msgs.msg import CompressedImage
 from threading import Thread
 
@@ -14,7 +15,6 @@ class RTSPCameraPublisher:
         self.topic_name = topic_name
         self.publisher = rospy.Publisher(topic_name, CompressedImage, queue_size=1)
 
-        # GStreamer pipeline
         self.pipeline = (
             f"rtspsrc location={rtsp_url} latency=50 ! "
             "decodebin ! "
@@ -25,7 +25,7 @@ class RTSPCameraPublisher:
 
         self.cap = cv2.VideoCapture(self.pipeline, cv2.CAP_GSTREAMER)
         if not self.cap.isOpened():
-            rospy.logerr(f"[{self.name}] 無法開啟 RTSP 串流：{rtsp_url}")
+            rospy.logerr(f"[{self.name}] ❌ 無法開啟 RTSP 串流：{rtsp_url}")
             self.cap = None
 
         self.thread = Thread(target=self.stream_loop)
@@ -42,32 +42,37 @@ class RTSPCameraPublisher:
             self.cap.release()
 
     def stream_loop(self):
-        rate = rospy.Rate(30)  # 30 FPS
         while not rospy.is_shutdown() and self.running:
+            if self.cap is None:
+                time.sleep(1)
+                continue
+
             ret, frame = self.cap.read()
             if not ret:
-                rospy.logwarn(f"[{self.name}] 讀取 RTSP 影格失敗")
-                rate.sleep()
+                rospy.logwarn(f"[{self.name}] ⚠️ 讀取 RTSP 影格失敗")
+                time.sleep(0.1)
                 continue
 
-            msg = CompressedImage()
-            msg.header.stamp = rospy.Time.now()
-            msg.format = "jpeg"
+            try:
+                msg = CompressedImage()
+                msg.header.stamp = rospy.Time.now()
+                msg.format = "jpeg"
 
-            success, encoded_img = cv2.imencode(".jpg", frame)
-            if not success:
-                rospy.logwarn(f"[{self.name}] OpenCV 影像壓縮失敗")
-                rate.sleep()
-                continue
+                success, encoded_img = cv2.imencode(".jpg", frame)
+                if not success:
+                    rospy.logwarn(f"[{self.name}] ❌ OpenCV 影像壓縮失敗")
+                    time.sleep(0.05)
+                    continue
 
-            msg.data = np.array(encoded_img).tobytes()
-            self.publisher.publish(msg)
-            rate.sleep()
+                msg.data = np.array(encoded_img).tobytes()
+                self.publisher.publish(msg)
+            except Exception as e:
+                rospy.logerr(f"[{self.name}] 發布過程出錯：{e}")
+                time.sleep(0.1)
 
 def main():
     rospy.init_node("multi_rtsp_to_compressed_node", anonymous=True)
 
-    # 四台相機資訊
     cameras = [
         {"name": "cam1", "url": "rtsp://admin:admin@192.168.1.101:554/video", "topic": "/camera1/color/image_raw/compressed"},
         {"name": "cam2", "url": "rtsp://admin:admin@192.168.1.102:554/video", "topic": "/camera2/color/image_raw/compressed"},

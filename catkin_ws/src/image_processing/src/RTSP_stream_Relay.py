@@ -27,6 +27,8 @@ class AVCRtspRelay:
         self.last_restart_time = 0
         self.retry_interval = 5  # 秒
 
+        self.fixed_fps = 6  # 固定推流偵率
+
     def stop_ffmpeg(self):
         if self.ffmpeg_process:
             rospy.logwarn("🔻 關閉 FFmpeg")
@@ -49,14 +51,14 @@ class AVCRtspRelay:
         self.last_restart_time = now
         self.stop_ffmpeg()
 
-        rospy.loginfo(f"🚀 啟動 FFmpeg：解析度 {w}x{h}, 推送到 {self.rtsp_url}")
+        rospy.loginfo(f"🚀 啟動 FFmpeg：解析度 {w}x{h}, FPS={self.fixed_fps}, 推送到 {self.rtsp_url}")
 
         cmd = [
             'ffmpeg', '-re',
             '-f', 'rawvideo',
             '-pix_fmt', 'bgr24',
             '-s', f'{w}x{h}',
-            '-r', '6',
+            '-r', str(self.fixed_fps),
             '-i', '-',
             '-c:v', 'libx264',
             '-preset', 'veryfast',
@@ -124,7 +126,7 @@ class AVCRtspRelay:
                         rospy.logwarn(f"[FFmpeg 錯誤] {decoded.strip()}")
                         self.stop_ffmpeg()
                     else:
-                        rospy.loginfo_throttle(1, f"[FFmpeg] {decoded.strip()}")
+                        rospy.loginfo_throttle(5, f"[FFmpeg] {decoded.strip()}")
             except:
                 pass
 
