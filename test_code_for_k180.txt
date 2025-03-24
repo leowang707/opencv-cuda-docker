@@ -1,0 +1,8 @@
+測試
+gst-launch-1.0 videotestsrc ! videoconvert ! autovideosink
+
+播放+錄影
+gst-launch-1.0 rtspsrc location=rtsp://192.168.1.92:8554/s1_1 latency=0 ! rtph265depay ! tee name=t t. ! h265parse ! mpegtsmux ! filesink async=0 location=rec_file_1234.mp4 t. ! avdec_h265 ! videoscale ! videoconvert ! autovideosink
+
+播放
+gst-launch-1.0 rtspsrc location=rtsp://192.168.1.92:8554/s1_1 latency=0 ! rtph265depay ! avdec_h265 ! videoscale ! videoconvert ! autovideosink
