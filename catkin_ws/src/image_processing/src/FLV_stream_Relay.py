@@ -43,31 +43,6 @@ class AVCRelay:
             self.ffmpeg_process.wait()
 
         rospy.loginfo(f"Starting FFmpeg with resolution: {w}x{h}, streaming to {self.rtmp_url}")
-
-        # FFmpeg 指令，將 JPEG 轉換為 FLV 並推送至 RTMP 伺服器
-        # cmd = [
-        #     'ffmpeg', '-y',
-        #     '-f', 'rawvideo',
-        #     '-pix_fmt', 'bgr24',
-        #     '-s', f'{w}x{h}',
-        #     '-r', '6',  # 設定 FPS 為 30，提高流暢度
-        #     '-i', '-',
-        #     '-c:v', 'libx264',
-        #     '-preset', 'ultrafast',  # 最快壓縮，減少計算負擔
-        #     '-tune', 'zerolatency',  # 降低延遲，適合即時串流
-        #     '-g', '6',  # 設定 GOP 為 30，提高壓縮效率
-        #     '-keyint_min', '6',  # 設定最小關鍵影格間隔
-        #     '-x264-params', 'slice-max-size=500',  # 避免 slice header error
-        #     '-bufsize', '500k',  # 增加緩衝，降低掉幀
-        #     '-b:v', '1000k',  # 限制碼率，提高畫質
-        #     '-threads', '8',  # 使用 8 個 CPU 核心，提升效率
-        #     '-rtbufsize', '200M',  # 減少緩衝延遲
-        #     '-probesize', '32', 
-        #     '-analyzeduration', '0',  # 加速初始化
-        #     '-vf', 'format=yuv420p',
-        #     '-f', 'flv',  # 變更為 FLV 格式，適合 RTMP 推流
-        #     self.rtmp_url  # 直接推送到 RTMP 伺服器
-        # ]
         
         cmd = [
             'ffmpeg', '-y',

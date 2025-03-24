@@ -1,36 +1,3 @@
-<!-- <!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <title>HLS 直播播放</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.14.3/video-js.min.css" rel="stylesheet">
-</head>
-<body>
-    <h1>HLS 直播串流</h1>
-    <video id="videoPlayer" class="video-js vjs-default-skin" controls autoplay width="800" height="450"></video>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.14.3/video.min.js"></script>
-    <script>
-        // 假設 HLS 與此網頁在同一台主機，只是不同 port。
-        // 取得瀏覽器上顯示的 host (含 port)
-        const host = window.location.hostname; // 例如 "192.168.0.165"、"localhost"、"myserver.com"
-        const port = 8080;                    // 假設你的 HLS server 的 port 是 8080
-        const hlsUrl = `http://${host}:${port}/hls/stream.m3u8`;
-
-        // 初始化 Video.js
-        var player = videojs('videoPlayer', {
-            techOrder: ["html5"]
-        });
-
-        // 設定串流來源
-        player.src({
-            src: hlsUrl,
-            type: 'application/x-mpegURL'
-        });
-    </script>
-</body>
-</html> -->
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>

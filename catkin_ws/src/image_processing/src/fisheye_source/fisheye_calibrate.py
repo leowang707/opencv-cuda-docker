@@ -17,7 +17,7 @@ _objpoints = []  # 每張圖片對應的3D棋盤格點
 _imgpoints = []  # 每張圖片中檢測到的2D角點
 
 # 讀取所有校正圖片（請確認圖片路徑正確）
-images = glob.glob('fisheye_source/*.jpg')
+images = glob.glob('*.jpg')
 if not images:
     print("錯誤：找不到 fisheye_source 資料夾下的 jpg 圖片")
     sys.exit(1)

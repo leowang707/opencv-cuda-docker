@@ -7,14 +7,14 @@ ENV USER=leowang707
 ENV HOME=/home/${USER}
 ENV OPENCV_VERSION=4.5.2
 
-# 更新系統
+# 更新系統時區與基礎套件
 RUN echo 'Etc/UTC' > /etc/timezone && \
     ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime && \
     apt-get update && apt-get install -y --no-install-recommends \
     tzdata ca-certificates sudo && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 建立非root用戶（與原先 Dockerfile 相同）
+# 建立非root用戶
 RUN useradd -m -s /bin/bash ${USER} && usermod -aG sudo ${USER} && \
     echo "root ALL=(ALL) ALL" >> /etc/sudoers && \
     echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -36,19 +36,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcudnn8 libcudnn8-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 檢測 GPU Compute Capability 並設置 CUDA_ARCH_BIN
+# 安裝 GStreamer 相關套件（支援 OpenCV-GStreamer）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgstreamer1.0-dev \
+    libgstreamer-plugins-base1.0-dev \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly \
+    gstreamer1.0-libav \
+    gstreamer1.0-tools && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 檢測 GPU Compute Capability 並設置 CUDA_ARCH_BIN（僅將結果印出，不會直接用於 cmake 參數）
 RUN export CUDA_ARCH_BIN=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | awk '{printf "%.1f ", $1}') && \
     echo "Detected CUDA_ARCH_BIN: ${CUDA_ARCH_BIN}"
 
-# 下載 OpenCV 及 Contrib
+# 下載 OpenCV 與 OpenCV Contrib
 RUN git clone -b ${OPENCV_VERSION} --depth 1 https://github.com/opencv/opencv.git /opencv
 RUN git clone -b ${OPENCV_VERSION} --depth 1 https://github.com/opencv/opencv_contrib.git /opencv_contrib
 
-# 建立 OpenCV 構建目錄
+# 建立 OpenCV 的 build 目錄
 RUN mkdir -p /opencv/build
 WORKDIR /opencv/build
 
-# 編譯 OpenCV
+# 編譯 OpenCV（包含 GStreamer 與 CUDA）
 RUN export CUDA_ARCH_BIN=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | awk '{printf "%.1f ", $1}') && \
     cmake -D CMAKE_BUILD_TYPE=RELEASE \
           -D CMAKE_INSTALL_PREFIX=/usr/local \
@@ -67,12 +79,13 @@ RUN export CUDA_ARCH_BIN=$(nvidia-smi --query-gpu=compute_cap --format=csv,nohea
           -D OPENCV_GENERATE_PKGCONFIG=YES \
           -D BUILD_opencv_python2=OFF \
           -D BUILD_opencv_python3=ON \
+          -D WITH_GSTREAMER=ON \ 
           .. && \
     make -j"$(nproc)" && \
     make install && \
     ldconfig
 
-# 測試 OpenCV 是否正確編譯（包含 CUDA）
+# 測試 OpenCV 安裝是否成功 (含 CUDA)
 RUN python3 -c "import cv2; print('OpenCV:', cv2.__version__, 'CUDA:', cv2.cuda.getCudaEnabledDeviceCount() > 0)"
 
 # 安裝 ROS Noetic
@@ -98,7 +111,7 @@ RUN if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then \
         echo "rosdep 已經初始化過了"; \
     fi
 
-# 安裝 ROS 依賴
+# 安裝 ROS 其他常用套件
 RUN pip3 install tqdm websocket-server websocket-client ffmpeg-python
 
 # 安裝 ffplay 相關依賴
@@ -139,14 +152,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-theora-image-transport && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 安裝HTTP 上觀看 RTMP 串流之相關套件
+# 安裝 HTTP 上觀看 RTMP 串流之相關套件
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     vim \
     libnginx-mod-rtmp \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 設置 `bashrc` 以自動載入 ROS 環境
+# 安裝 RTSP 轉 HLS 串流之相關套件
+ARG MTX_VERSION=1.11.3
+
+RUN mkdir -p /opt/mediamtx && \
+    curl -L https://github.com/bluenviron/mediamtx/releases/download/v${MTX_VERSION}/mediamtx_v${MTX_VERSION}_linux_amd64.tar.gz \
+    | tar xz -C /opt/mediamtx && \
+    ln -s /opt/mediamtx/mediamtx /usr/local/bin/mediamtx
+
+
+# 設置 `bashrc` 以自動載入 ROS 環境與自定義路徑
 RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
     echo "source ${HOME}/opencv-cuda-docker/catkin_ws/devel/setup.bash" >> /root/.bashrc && \
     echo "export ROS_PACKAGE_PATH=${HOME}/opencv-cuda-docker/catkin_ws/src:\$ROS_PACKAGE_PATH" >> /root/.bashrc && \
@@ -154,11 +176,10 @@ RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
     echo "source /opt/ros/noetic/setup.bash" >> ${HOME}/.bashrc && \
     echo "source ${HOME}/opencv-cuda-docker/catkin_ws/devel/setup.bash" >> ${HOME}/.bashrc && \
     echo "export ROS_PACKAGE_PATH=${HOME}/opencv-cuda-docker/catkin_ws/src:\$ROS_PACKAGE_PATH" >> ${HOME}/.bashrc && \
-    echo "export PYTHONPATH=/opt/ros/noetic/lib/python3/dist-packages:\$PYTHONPATH" >> ${HOME}/.bashrc
+    echo "export PYTHONPATH=/opt/ros/noetic/lib/python3/dist-packages:\$PYTHONPATH" >> ${HOME}/.bashrc && \
+    echo "cp ${HOME}/opencv-cuda-docker/RTMP/nginx.conf /etc/nginx/nginx.conf" >> ~/.bashrc
 
-RUN echo "cp ${HOME}/opencv-cuda-docker/RTMP/nginx.conf /etc/nginx/nginx.conf" >> ~/.bashrc
-
-# 設置用戶權限
+# 再次設定用戶權限（確保 ${USER} 擁有 sudo 權限）
 RUN echo "root ALL=(ALL) ALL" >> /etc/sudoers && \
     echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
