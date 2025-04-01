@@ -20,7 +20,7 @@ class AVCRtspRelay:
             CompressedImage, self.image_callback, queue_size=1
         )
 
-        self.rtsp_url = "rtsp://192.168.0.165:8554/mystream"
+        self.rtsp_url = "rtsp://192.168.1.108:8554/mystream"
         self.ffmpeg_process = None
         self.width = None
         self.height = None
@@ -71,6 +71,23 @@ class AVCRtspRelay:
             '-rtsp_transport', 'tcp',
             self.rtsp_url
         ]
+        
+        # cmd = [
+        #     'ffmpeg', '-re',
+        #     '-f', 'rawvideo',
+        #     '-pix_fmt', 'bgr24',
+        #     '-s', f'{w}x{h}',
+        #     '-r', str(self.fixed_fps),
+        #     '-i', '-',
+        #     '-c:v', 'libx265',                      # ← 改為 H.265 編碼器
+        #     '-preset', 'veryfast',
+        #     '-tune', 'zerolatency',
+        #     '-x265-params', 'keyint=10:min-keyint=10:no-scenecut=1',
+        #     '-b:v', '1500k',
+        #     '-f', 'rtsp',
+        #     '-rtsp_transport', 'tcp',
+        #     self.rtsp_url
+        # ]
 
         try:
             self.ffmpeg_process = subprocess.Popen(

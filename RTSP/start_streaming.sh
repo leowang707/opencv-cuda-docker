@@ -8,7 +8,7 @@ MTX_BIN="/opt/mediamtx/mediamtx"
 MTX_YML="$HOME/opencv-cuda-docker/RTSP/mediamtx.yml"
 
 # 設定 RTSP 推流腳本與網頁根目錄
-RTSP_SCRIPT="$HOME/opencv-cuda-docker/catkin_ws/src/image_processing/src/RTSP_stream_Relay.py"
+RTSP_SCRIPT="$HOME/opencv-cuda-docker/catkin_ws/src/image_processing/src/RTSP_stream_Relay_multistream.py"
 WEB_ROOT="$HOME/opencv-cuda-docker/RTSP"
 
 # 啟動 MediaMTX

@@ -24,9 +24,9 @@
 
     <!-- 🟣 GPU 拼接 -->
     <node name="image_stitcher_GPU" pkg="image_processing" type="image_stitcher_GPU.py" output="screen">
-        <param name="sub_camera_topic_left" value="/camera3_fix/color/image_raw/compressed"/>
+        <param name="sub_camera_topic_left" value="/camera1_fix/color/image_raw/compressed"/>
         <param name="sub_camera_topic_mid" value="/camera2_fix/color/image_raw/compressed"/>
-        <param name="sub_camera_topic_right" value="/camera1_fix/color/image_raw/compressed"/>
+        <param name="sub_camera_topic_right" value="/camera3_fix/color/image_raw/compressed"/>
         <param name="pub_camera_topic" value="/camera_stitched/color/image_raw/compressed"/>
         <param name="output_dir" value="stitched_results"/>
         <param name="h1_path" value="stitched_results/homography/640_fisheye/H1_17.npy"/>

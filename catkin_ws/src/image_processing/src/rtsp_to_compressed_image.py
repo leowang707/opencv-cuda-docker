@@ -15,10 +15,17 @@ class RTSPCameraPublisher:
         self.topic_name = topic_name
         self.publisher = rospy.Publisher(topic_name, CompressedImage, queue_size=1)
 
+        # self.pipeline = (
+        #     f"rtspsrc location={rtsp_url} latency=50 ! "
+        #     "decodebin ! "
+        #     "videoconvert ! "
+        #     "video/x-raw,format=BGR ! "
+        #     "appsink drop=true max-buffers=1 sync=false"
+        # )
+        
         self.pipeline = (
-            f"rtspsrc location={rtsp_url} latency=50 ! "
-            "decodebin ! "
-            "videoconvert ! "
+            f"rtspsrc location={rtsp_url} latency=0 protocols=udp drop-on-latency=true ! "
+            "rtph264depay ! h264parse ! avdec_h264 ! videoconvert ! "
             "video/x-raw,format=BGR ! "
             "appsink drop=true max-buffers=1 sync=false"
         )
@@ -74,10 +81,10 @@ def main():
     rospy.init_node("multi_rtsp_to_compressed_node", anonymous=True)
 
     cameras = [
-        {"name": "cam1", "url": "rtsp://admin:admin@192.168.1.101:554/video", "topic": "/camera1/color/image_raw/compressed"},
-        {"name": "cam2", "url": "rtsp://admin:admin@192.168.1.102:554/video", "topic": "/camera2/color/image_raw/compressed"},
-        {"name": "cam3", "url": "rtsp://admin:admin@192.168.1.103:554/video", "topic": "/camera3/color/image_raw/compressed"},
-        {"name": "cam4", "url": "rtsp://admin:admin@192.168.1.104:554/video", "topic": "/camera4/color/image_raw/compressed"},
+        {"name": "cam1", "url": "rtsp://admin:admin@192.168.131.101:554/video", "topic": "/camera1/color/image_raw/compressed"},
+        {"name": "cam2", "url": "rtsp://admin:admin@192.168.131.102:554/video", "topic": "/camera2/color/image_raw/compressed"},
+        {"name": "cam3", "url": "rtsp://admin:admin@192.168.131.103:554/video", "topic": "/camera3/color/image_raw/compressed"},
+        {"name": "cam4", "url": "rtsp://admin:admin@192.168.131.104:554/video", "topic": "/camera4/color/image_raw/compressed"},
     ]
 
     nodes = []
