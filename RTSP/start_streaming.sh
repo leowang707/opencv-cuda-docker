@@ -18,10 +18,10 @@ MTX_PID=$!
 echo "MediaMTX 啟動，PID: $MTX_PID"
 
 # 啟動 HTTP 伺服器 (提供網頁)
-echo "🟢 啟動 HTTP 伺服器 (port 8080)..."
-python3 -m http.server 8080 --directory "$WEB_ROOT" --bind 0.0.0.0 &
-HTTP_SERVER_PID=$!
-echo "HTTP 伺服器啟動，PID: $HTTP_SERVER_PID"
+# echo "🟢 啟動 HTTP 伺服器 (port 8080)..."
+# python3 -m http.server 8080 --directory "$WEB_ROOT" --bind 0.0.0.0 &
+# HTTP_SERVER_PID=$!
+# echo "HTTP 伺服器啟動，PID: $HTTP_SERVER_PID"
 
 # 啟動 RTSP 推流腳本
 echo "🟢 啟動 RTSP 推流腳本..."

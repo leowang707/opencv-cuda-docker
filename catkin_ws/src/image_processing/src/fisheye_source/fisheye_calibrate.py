@@ -10,14 +10,17 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # 準備棋盤格的三維座標 (例如 (0,0,0), (1,0,0), ..., (3,2,0))
 objp = np.zeros((1, CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
-objp[0, :, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
+# objp[0, :, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
+
+square_size = 25  # mm
+objp[0, :, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2) * square_size
 
 # 儲存所有圖片的3D點與對應的2D角點
 _objpoints = []  # 每張圖片對應的3D棋盤格點
 _imgpoints = []  # 每張圖片中檢測到的2D角點
 
 # 讀取所有校正圖片（請確認圖片路徑正確）
-images = glob.glob('*.jpg')
+images = glob.glob('camera_right/*.jpg')
 if not images:
     print("錯誤：找不到 fisheye_source 資料夾下的 jpg 圖片")
     sys.exit(1)
@@ -87,9 +90,16 @@ except cv2.error as e:
 
 print("標定重投影誤差 (RMS):", rms)
 print("相機內參矩陣 K:")
-print(K)
+# print(K)
+# Add "," to all elements in K
+def format_matrix(matrix):
+    return np.array2string(matrix, separator=", ")
+K_str = format_matrix(K)
+print(K_str)
 print("魚眼畸變參數 D (k1, k2, k3, k4):")
-print(D)
+# print(D)
+D_str = format_matrix(D)
+print(D_str)
 
 # 提取焦距 (單位：像素)
 fx = K[0, 0]

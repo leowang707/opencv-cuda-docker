@@ -83,7 +83,7 @@ class ROSImageStitcher:
 
         # 建立 ThreadPoolExecutor，設定最多可用的 worker 數
         # 視實際需求可調整，例如 max_workers=2, 3, ...
-        self.executor = ThreadPoolExecutor(max_workers=4)
+        self.executor = ThreadPoolExecutor(max_workers=3)
         rospy.loginfo("ThreadPoolExecutor created with max_workers=2")
 
     def left_callback(self, msg):

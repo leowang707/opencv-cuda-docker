@@ -20,7 +20,7 @@ class AVCRtspRelay:
             CompressedImage, self.image_callback, queue_size=1
         )
 
-        self.rtsp_url = "rtsp://192.168.1.108:8554/mystream"
+        self.rtsp_url = "rtsp://192.168.0.108:8554/mystream"
         self.ffmpeg_process = None
         self.width = None
         self.height = None

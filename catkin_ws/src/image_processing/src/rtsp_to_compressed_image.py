@@ -81,10 +81,10 @@ def main():
     rospy.init_node("multi_rtsp_to_compressed_node", anonymous=True)
 
     cameras = [
-        {"name": "cam1", "url": "rtsp://admin:admin@192.168.131.101:554/video", "topic": "/camera1/color/image_raw/compressed"},
-        {"name": "cam2", "url": "rtsp://admin:admin@192.168.131.102:554/video", "topic": "/camera2/color/image_raw/compressed"},
-        {"name": "cam3", "url": "rtsp://admin:admin@192.168.131.103:554/video", "topic": "/camera3/color/image_raw/compressed"},
-        {"name": "cam4", "url": "rtsp://admin:admin@192.168.131.104:554/video", "topic": "/camera4/color/image_raw/compressed"},
+        {"name": "cam1", "url": "rtsp://admin:admin@192.168.0.101:554/video", "topic": "/camera1/color/image_raw/compressed"},
+        {"name": "cam2", "url": "rtsp://admin:admin@192.168.0.102:554/video", "topic": "/camera2/color/image_raw/compressed"},
+        {"name": "cam3", "url": "rtsp://admin:admin@192.168.0.103:554/video", "topic": "/camera3/color/image_raw/compressed"},
+        # {"name": "cam4", "url": "rtsp://admin:admin@192.168.131.104:554/video", "topic": "/camera4/color/image_raw/compressed"},
     ]
 
     nodes = []

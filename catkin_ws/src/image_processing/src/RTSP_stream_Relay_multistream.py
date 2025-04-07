@@ -123,12 +123,12 @@ class AVCMultiRtspRelay:
         # 支援每路的 URL、FPS 與解析度設定
         self.streams = {
             "/camera_stitched/color/image_raw/compressed": {
-                "url": "rtsp://192.168.1.108:8554/mystream",
+                "url": "rtsp://192.168.0.108:8554/mystream",
                 "fps": 60,
                 "resolution": (1920, 480)
             },
             "/halo_radar/radar_image/compressed": {
-                "url": "rtsp://192.168.1.108:8554/radar",
+                "url": "rtsp://192.168.0.108:8554/radar",
                 "fps": 1,
                 "resolution": (480, 480)  # 使用原始大小
             }

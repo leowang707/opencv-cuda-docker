@@ -45,23 +45,50 @@ if __name__ == '__main__':
 
         # 共用的相機參數
         DIM = (640, 480)
-        K = np.array([[263.80839843, 0.41589978, 327.54224715],
-                      [0.0, 351.28264616, 238.17621743],
-                      [0.0, 0.0, 1.0]])
-        D = np.array([[-0.03004851], [0.08039913], [-0.14184036], [0.08669384]])
-
-        # 相機 topic 配對清單（原始 topic, 校正後 topic）
-        camera_pairs = [
-            ('/camera1/color/image_raw/compressed', '/camera1_fix/color/image_raw/compressed'),
-            ('/camera2/color/image_raw/compressed', '/camera2_fix/color/image_raw/compressed'),
-            ('/camera3/color/image_raw/compressed', '/camera3_fix/color/image_raw/compressed'),
-            ('/camera4/color/image_raw/compressed', '/camera4_fix/color/image_raw/compressed'),
+        
+        # 每台相機的參數（K, D）
+        camera_configs = [
+            # camera left
+            (
+                '/camera1/color/image_raw/compressed',
+                '/camera1_fix/color/image_raw/compressed',
+                np.array([[2.94104211e+02, 1.00501200e-01, 3.17351129e+02],
+                          [0.00000000e+00, 3.90626759e+02, 2.44645859e+02],
+                          [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]]),
+                np.array([[-0.15439177], [ 0.45612835], [-0.79521684], [ 0.46727377]])
+            ),
+            # camera middle
+            (
+                '/camera2/color/image_raw/compressed',
+                '/camera2_fix/color/image_raw/compressed',
+                np.array([[ 2.62450733e+02, -1.42390413e-01,  3.24028455e+02],
+                          [ 0.00000000e+00,  3.48556538e+02,  2.56079733e+02],
+                          [ 0.00000000e+00,  0.00000000e+00,  1.00000000e+00]]),
+                np.array([[-0.01878612], [ 0.02131176], [-0.02093047], [ 0.00497547]])
+            ),
+            # camera right
+            (
+                '/camera3/color/image_raw/compressed',
+                '/camera3_fix/color/image_raw/compressed',
+                np.array([[ 2.60945033e+02, -2.08546212e-01,  3.24930850e+02],
+                          [ 0.00000000e+00,  3.47072705e+02,  2.62938882e+02],
+                          [ 0.00000000e+00,  0.00000000e+00,  1.00000000e+00]]),
+                np.array([[-0.03237013], [ 0.0271175 ], [-0.01698575], [ 0.00307905]])
+            ),
+            # camera back
+            # (
+            #     '/camera4/color/image_raw/compressed',
+            #     '/camera4_fix/color/image_raw/compressed',
+            #     np.array([[295.0, 0.1, 318.0],
+            #               [0.0, 395.0, 245.0],
+            #               [0.0, 0.0, 1.0]]),
+            #     np.array([[-0.158], [0.458], [-0.798], [0.465]])
+            # )
         ]
 
-        # 建立多個 undistorter
         undistorters = [
-            CameraUndistorter(in_topic, out_topic, DIM, K, D, balance=0.47)
-            for in_topic, out_topic in camera_pairs
+            CameraUndistorter(in_topic, out_topic, DIM, K, D, balance=0.41)
+            for in_topic, out_topic, K, D in camera_configs
         ]
 
         rospy.loginfo("✅ 四台相機魚眼去畸變模組已啟動")
